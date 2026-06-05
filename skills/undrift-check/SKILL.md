@@ -18,39 +18,27 @@ Run this for a quick overview of session counts across all your Claude Code proj
 Run:
 
 ```bash
-resolve_path() {
-  local encoded="$1"
-  local base="$HOME"
-  local result="~"
-  local rest="$encoded"
-  while [ -n "$rest" ]; do
-    local matched=0
-    local i=${#rest}
-    while [ $i -ge 1 ]; do
-      local seg="${rest:0:$i}"
-      if [ -d "$base/$seg" ]; then
-        result="$result/$seg"
-        base="$base/$seg"
-        rest="${rest:$i}"
-        [ "${rest:0:1}" = "-" ] && rest="${rest:1}"
-        matched=1
-        break
-      fi
-      i=$((i - 1))
-    done
-    [ $matched -eq 0 ] && { result="$result/${rest#-}"; break; }
-  done
-  echo "$result"
-}
-
 home_slug=$(echo "$HOME" | tr '/' '-')
 home_slug_escaped=$(echo "$home_slug" | sed 's/[.\\[*^$]/\\&/g')
 for dir in ~/.claude/projects/*/; do
   [ -d "$dir" ] || continue
   count=$(find "$dir" -maxdepth 1 -name "*.jsonl" 2>/dev/null | wc -l | tr -d ' ')
   encoded=$(basename "$dir" | sed "s/^${home_slug_escaped}-//")
-  name=$(resolve_path "$encoded")
-  echo "$count $name"
+  base="$HOME" result="~" rest="$encoded"
+  while [ -n "$rest" ]; do
+    matched=0 i=${#rest}
+    while [ $i -ge 1 ]; do
+      seg="${rest:0:$i}"
+      if [ -d "$base/$seg" ]; then
+        result="$result/$seg" base="$base/$seg" rest="${rest:$i}"
+        [ "${rest:0:1}" = "-" ] && rest="${rest:1}"
+        matched=1; break
+      fi
+      i=$((i - 1))
+    done
+    [ $matched -eq 0 ] && { result="$result/${rest#-}"; break; }
+  done
+  echo "$count $result"
 done | sort -rn
 ```
 
