@@ -47,7 +47,7 @@ home_slug=$(echo "$HOME" | tr '/' '-')
 home_slug_escaped=$(echo "$home_slug" | sed 's/[.\\[*^$]/\\&/g')
 for dir in ~/.claude/projects/*/; do
   [ -d "$dir" ] || continue
-  count=$(ls "$dir"*.jsonl 2>/dev/null | wc -l | tr -d ' ')
+  count=$(find "$dir" -maxdepth 1 -name "*.jsonl" 2>/dev/null | wc -l | tr -d ' ')
   encoded=$(basename "$dir" | sed "s/^${home_slug_escaped}-//")
   name=$(resolve_path "$encoded")
   echo "$count $name"

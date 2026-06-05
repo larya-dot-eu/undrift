@@ -32,9 +32,10 @@ chmod +x ~/.claude/skills/undrift/scripts/session-check.sh
 if grep -q "session-check.sh" ~/.claude/settings.json; then
   echo "Hook already present, skipping."
 else
+  tmp=$(mktemp)
   jq '.hooks.UserPromptSubmit += [{"matcher": "", "hooks": [{"type": "command", "command": "bash ~/.claude/skills/undrift/scripts/session-check.sh"}]}]' \
-    ~/.claude/settings.json > /tmp/undrift_settings_tmp.json \
-    && mv /tmp/undrift_settings_tmp.json ~/.claude/settings.json
+    ~/.claude/settings.json > "$tmp" \
+    && mv "$tmp" ~/.claude/settings.json
 fi
 
 echo ""
