@@ -102,6 +102,10 @@ undrift/
 
 ## Changelog
 
+### v1.0.4 — 2026-06-05
+
+- Fix: deleted worktree paths no longer show a leading `-` in `/undrift-check`
+
 ### v1.0.3 — 2026-06-05
 
 - Security hardening across installer and analysis skill
