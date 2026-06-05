@@ -6,3 +6,7 @@
 
 # Design docs — not published to GitHub (Anthropic marketplace only needs skills/)
 docs/
+
+# Local Claude guidance
+CLAUDE.md
+planning.md
