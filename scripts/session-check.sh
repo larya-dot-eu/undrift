@@ -18,13 +18,14 @@ touch "$STAMP_FILE"
 
 THRESHOLD=45
 home_slug=$(echo "$HOME" | tr '/' '-')
-home_slug_escaped=$(echo "$home_slug" | sed 's/[.[\*^$]/\\&/g')
+home_slug_escaped=$(echo "$home_slug" | sed 's/[.\\[*^$]/\\&/g')
 
 for dir in ~/.claude/projects/*/; do
   [ -d "$dir" ] || continue
   count=$(ls "$dir"*.jsonl 2>/dev/null | wc -l | tr -d ' ')
   if [ "$count" -ge "$THRESHOLD" ]; then
     remaining=$((50 - count))
+    [ "$remaining" -lt 0 ] && remaining=0
     name=$(basename "$dir" | sed "s/^${home_slug_escaped}-//")
     echo "⚠ undrift: $name has $count sessions — $remaining left before the 50-session window. Run /undrift-full to capture patterns."
   fi
