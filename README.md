@@ -60,9 +60,11 @@ root, merge the rules you agree with into `CLAUDE.md`, then delete the file.
 ## How it works
 
 Session files live in `~/.claude/projects/`. Each session is one `.jsonl`
-file. Undrift counts these files per project and, during a full run, spawns
-up to 5 parallel subagents to read and extract correction patterns from the
-most recent 50 sessions.
+file. Undrift counts these files per project and, during a full run, processes
+the most recent 50 sessions directly in the main agent — no subagents. A single
+bash pass filters out sessions with fewer than 3 real user turns, extracts user
+text, and stops at a 2000-line cap. The agent then analyses the corpus in-context
+and proposes rules.
 
 Rules are never written directly to `CLAUDE.md` — always to `CLAUDE.md.undrift`
 for manual review first.
@@ -101,6 +103,14 @@ undrift/
 ```
 
 ## Changelog
+
+### v1.0.6 — 2026-06-05
+
+- Rewrite: `/undrift-full` now runs entirely in the main agent — no subagents
+- Add structural pre-filter: sessions with fewer than 3 real user turns are skipped (excludes automated SDK calls)
+- Fix jq field paths to match actual Claude Code JSONL format (`type/message.content`)
+- Add 2000-line global extraction cap with reporting in terminal summary
+- Analysis now uses semantic intent matching, not literal keyword scanning
 
 ### v1.0.5 — 2026-06-05
 
