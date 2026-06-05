@@ -94,7 +94,13 @@ The hook (`scripts/session-check.sh`) runs automatically on every Claude Code
 more than once per session. When any project reaches 45 sessions, it prints:
 
 ```
-⚠ undrift: GitHubReps/my-project has 47 sessions — 3 left before the 50-session window. Run /undrift-full to capture patterns.
+⚠ undrift: my-project has 47 sessions — 3 left before the 50-session window. Run /undrift-full to capture patterns.
+```
+
+For projects already past 50 sessions:
+
+```
+⚠ undrift: my-project has 63 sessions — 13 past the 50-session window. Run /undrift-full to capture patterns.
 ```
 
 ## File layout
@@ -112,6 +118,16 @@ undrift/
 ├── LICENSE
 └── README.md
 ```
+
+## Changelog
+
+### v1.0.1 — 2026-06-05
+
+- Fix: hook now shows `"N past the 50-session window"` for projects that already exceed 50 sessions, instead of the ambiguous `"0 left"` from v1.0.0.
+
+### v1.0.0 — 2026-06-05
+
+- Initial release: `/undrift-check`, `/undrift-full`, and session-start hook.
 
 ## License
 
