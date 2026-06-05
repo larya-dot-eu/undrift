@@ -102,6 +102,10 @@ undrift/
 
 ## Changelog
 
+### v1.0.5 — 2026-06-05
+
+- Fix: `/undrift-check` skill now renders correctly in the Claude Code skill loader
+
 ### v1.0.4 — 2026-06-05
 
 - Fix: deleted worktree paths no longer show a leading `-` in `/undrift-check`
