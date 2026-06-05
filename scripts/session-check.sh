@@ -25,8 +25,12 @@ for dir in ~/.claude/projects/*/; do
   count=$(ls "$dir"*.jsonl 2>/dev/null | wc -l | tr -d ' ')
   if [ "$count" -ge "$THRESHOLD" ]; then
     remaining=$((50 - count))
-    [ "$remaining" -lt 0 ] && remaining=0
     name=$(basename "$dir" | sed "s/^${home_slug_escaped}-//")
-    echo "⚠ undrift: $name has $count sessions — $remaining left before the 50-session window. Run /undrift-full to capture patterns."
+    if [ "$remaining" -le 0 ]; then
+      over=$((-remaining))
+      echo "⚠ undrift: $name has $count sessions — $over past the 50-session window. Run /undrift-full to capture patterns."
+    else
+      echo "⚠ undrift: $name has $count sessions — $remaining left before the 50-session window. Run /undrift-full to capture patterns."
+    fi
   fi
 done
