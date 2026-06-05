@@ -23,36 +23,16 @@ close to the 50-session window, so you never have to think about timing.
 
 ## Installation
 
-### 1. Copy skill files
+### 1. Clone and install
 
 ```bash
-mkdir -p ~/.claude/skills/undrift-check
-mkdir -p ~/.claude/skills/undrift-full
-mkdir -p ~/.claude/skills/undrift/scripts
-
-cp skills/undrift-check/SKILL.md ~/.claude/skills/undrift-check/SKILL.md
-cp skills/undrift-full/SKILL.md  ~/.claude/skills/undrift-full/SKILL.md
-cp scripts/session-check.sh      ~/.claude/skills/undrift/scripts/session-check.sh
-chmod +x ~/.claude/skills/undrift/scripts/session-check.sh
+git clone https://github.com/larya-dot-eu/undrift.git
+bash undrift/install.sh
 ```
 
-### 2. Wire the session-start hook
+The script handles everything: creating directories, copying skill files, and wiring the session-start hook.
 
-Add the following to `~/.claude/settings.json` using `jq`:
-
-```bash
-jq '.hooks.UserPromptSubmit += [{"matcher": "", "hooks": [{"type": "command", "command": "bash ~/.claude/skills/undrift/scripts/session-check.sh"}]}]' \
-  ~/.claude/settings.json > /tmp/settings_tmp.json \
-  && mv /tmp/settings_tmp.json ~/.claude/settings.json
-```
-
-If `~/.claude/settings.json` does not exist yet, create it first:
-
-```bash
-echo '{}' > ~/.claude/settings.json
-```
-
-### 3. Verify
+### 2. Verify
 
 Open a new Claude Code session. Run `/context` and confirm `undrift-check`
 and `undrift-full` appear under User skills.
@@ -115,6 +95,7 @@ undrift/
 │   └── undrift-full/
 │       └── SKILL.md            # /undrift-full skill
 ├── .gitignore
+├── install.sh                  # One-command installer
 ├── LICENSE
 └── README.md
 ```
