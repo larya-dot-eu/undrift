@@ -38,7 +38,7 @@ resolve_path() {
       fi
       i=$((i - 1))
     done
-    [ $matched -eq 0 ] && { result="$result/$rest"; break; }
+    [ $matched -eq 0 ] && { result="$result/${rest#-}"; break; }
   done
   echo "$result"
 }
