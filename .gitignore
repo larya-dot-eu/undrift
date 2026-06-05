@@ -1,0 +1,8 @@
+# macOS
+.DS_Store
+
+# Cache
+*.cache
+
+# Design docs — not published to GitHub (Anthropic marketplace only needs skills/)
+docs/
