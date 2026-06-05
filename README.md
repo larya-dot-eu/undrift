@@ -121,6 +121,10 @@ undrift/
 
 ## Changelog
 
+### v1.0.2 — 2026-06-05
+
+- Fix: `/undrift-check` now displays real filesystem paths (e.g. `~/my-project/sub-folder`) instead of the hyphen-encoded folder names Claude Code uses internally.
+
 ### v1.0.1 — 2026-06-05
 
 - Fix: hook now shows `"N past the 50-session window"` for projects that already exceed 50 sessions, instead of the ambiguous `"0 left"` from v1.0.0.
