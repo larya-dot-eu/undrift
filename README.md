@@ -102,6 +102,12 @@ undrift/
 
 ## Changelog
 
+### v1.0.3 — 2026-06-05
+
+- Security hardening across installer and analysis skill
+- Expanded sensitive data protection in `/undrift-full`
+- Improved file counting reliability
+
 ### v1.0.2 — 2026-06-05
 
 - Fix: `/undrift-check` now displays real filesystem paths (e.g. `~/my-project/sub-folder`) instead of the hyphen-encoded folder names Claude Code uses internally.
