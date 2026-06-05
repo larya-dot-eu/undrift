@@ -5,14 +5,14 @@ description: >
   repeated instructions, and reverted changes. Writes proposed CLAUDE.md rules
   to CLAUDE.md.undrift — review and merge manually. Run when patterns keep
   repeating or after /undrift-check flags a project as needing attention.
-agents: [main_agent]
 ---
 
 # Undrift Full — Session Pattern Mining → CLAUDE.md Rules
 
-You are acting as a **meta-learning agent** for this project. Your mission is
-to scan past sessions, extract recurring corrections, and distil them into
-durable CLAUDE.md rules — so the same mistakes never have to be corrected twice.
+You are acting as a **meta-learning agent** for this project, running entirely
+in the main agent — no subagents. Your mission is to scan past sessions,
+extract recurring corrections, and distil them into durable CLAUDE.md rules —
+so the same mistakes never have to be corrected twice.
 
 ---
 
@@ -31,15 +31,66 @@ durable CLAUDE.md rules — so the same mistakes never have to be corrected twic
 
 ---
 
-## Step 1 — Parallel Extraction
+## Step 1 — Filter + Extract
 
-Spawn **max. 5 parallel subagents**, each processing a batch of ~10 sessions.
+Run the following bash loop in the main agent. It processes sessions newest-first,
+skips sessions with fewer than 3 text-based user turns, extracts user text content,
+and stops when the global 2000-line cap is reached.
 
-Each subagent must extract every instance of the following:
+**Verified JSONL structure:** each line in a session file is a JSON object. User
+messages have `"type": "user"` with a nested `"message"` object whose `"content"`
+is either a plain string or an array of content blocks. Text turns have content
+blocks with `"type": "text"`; tool results have `"type": "tool_result"` and do
+not count as user turns.
+
+```bash
+lines=0
+for f in $(ls -t <session_dir>/*.jsonl 2>/dev/null | head -50); do
+  # Count text-based user turns only (excludes tool results)
+  turn_count=$(jq -r 'select(.type == "user") |
+    .message.content |
+    if type == "string" then "T"
+    elif (map(select(.type == "text")) | length) > 0 then "T"
+    else empty
+    end' "$f" 2>/dev/null | wc -l | tr -d ' ')
+  [ "${turn_count:-0}" -lt 3 ] && continue
+  # Extract user text content
+  extracted=$(jq -r 'select(.type == "user") |
+    .message.content |
+    if type == "string" then .
+    else (.[]? | select(.type == "text") | .text)
+    end' "$f" 2>/dev/null)
+  new_lines=$(echo "$extracted" | wc -l)
+  if [ $((lines + new_lines)) -gt 2000 ]; then
+    echo "CAP_HIT:$(basename $f)"
+    break
+  fi
+  echo "=== SESSION: $(basename $f) ==="
+  echo "$extracted"
+  lines=$((lines + new_lines))
+done
+```
+
+Read the full output. Count `CAP_HIT:` lines — these are sessions that were
+skipped due to the cap and are reported in the terminal summary. The text
+between `=== SESSION: ===` headers is the analysis corpus for Step 2.
+
+---
+
+## Step 2 — In-context Analysis
+
+Analyze the extracted text block directly in the main agent — no tools, no
+additional file reads.
+
+Identify correction patterns by **intent, not literal keyword matching**. The
+signal type labels below are semantic categories. The example phrasings are
+illustrations of what those patterns can look like, not an exhaustive list to
+scan for. A correction may be expressed as "nah", "that's not right",
+"undo that", or in any language — use judgment.
 
 | Signal Type | What to Look For |
 |---|---|
-| **Explicit corrections** | User said "no", "don't do that", "instead do X", "stop doing Y", "I always have to tell you..." |
+| **Explicit corrections** | User expressed disagreement or asked Claude to change course |
 | **Reverted changes** | Code or content Claude produced that was immediately undone, rewritten, or replaced |
 | **Repeated instructions** | The same instruction or constraint given in 2 or more separate sessions |
 | **Re-explained context** | Concepts, project conventions, or constraints the user had to re-state (should have been remembered) |
@@ -48,7 +99,7 @@ Each subagent must extract every instance of the following:
 For each extracted item, record:
 - **Pattern**: A brief description of the recurring behaviour
 - **Evidence**: A verbatim or near-verbatim quote from the session
-- **Session reference**: Session ID or approximate date
+- **Session reference**: Session ID from the `=== SESSION: ===` header
 - **Signal type**: Which category above it belongs to
 
 **Sensitive data safety:** before recording any verbatim quote, apply all of
@@ -76,17 +127,13 @@ Never write raw credentials, keys, or connection strings into any output file.
 
 ---
 
-## Step 2 — Aggregation
+## Step 3 — Aggregate, Prioritise, Reconcile
 
-1. Merge all subagent findings into a single flat list
+1. Merge all findings into a single flat list
 2. Deduplicate near-identical patterns — treat variants of the same correction as one pattern
 3. Assign a **frequency count** to each pattern (number of distinct sessions it appeared in)
 4. Tag each pattern with its dominant theme:
    - `code-structure` | `logic` | `intention` | `output-format` | `file-naming` | `api-usage` | `context` | `tone` | `workflow` | `other`
-
----
-
-## Step 3 — Filter & Prioritise
 
 Apply the following thresholds:
 
@@ -94,24 +141,22 @@ Apply the following thresholds:
 - ⚠️ **Borderline** → patterns in **exactly 2** sessions → log to REJECTED section, do not propose as rules
 - ❌ **Exclude** → one-offs or highly context-specific corrections unlikely to recur
 
-Sort all candidates by frequency descending. Within the same frequency, prioritise patterns that caused significant rework when violated.
+Sort candidates by frequency descending. Within the same frequency, prioritise
+patterns that caused significant rework when violated.
 
----
-
-## Step 4 — Reconcile with Existing Rules
+**Reconcile with existing rules:**
 
 1. Read all `CLAUDE.md` files in the project (root and subfolders)
 2. For each candidate rule, determine one of three outcomes:
-
    - **SKIP** — the rule is already covered by an existing CLAUDE.md entry
    - **NEW** — the rule is genuinely new, no overlap with existing rules
    - **CONFLICT** — the candidate contradicts or partially overlaps an existing rule → flag both for manual review
 
-If no `CLAUDE.md` exists yet, skip this step and note it in the output.
+If no `CLAUDE.md` exists yet, skip reconciliation and note it in the output.
 
 ---
 
-## Step 5 — Write Output Files
+## Step 4 — Write Output Files + Terminal Summary
 
 ### File 1: `CLAUDE.md.undrift`
 
@@ -164,26 +209,28 @@ Append to this file in the project root. Never overwrite it.
 ```markdown
 ## Undrift Run — [date]
 
-- Sessions analysed: N
-- Candidate patterns found: N
-- Rules proposed: N (across N themes)
-- Conflicts flagged: N
+- Sessions found:       N
+- Sessions filtered:    N  (< 3 user turns)
+- Sessions skipped:     N  (2000-line cap)
+- Sessions analysed:    N
+- Candidate patterns:   N
+- Rules proposed:       N (across N themes)
+- Conflicts flagged:    N
 - Rejected (< 3 sessions): N patterns — [brief list]
 ```
 
-> `CORRECTIONS.log.md` grows with every run and has no automatic limit.
-> It can be safely archived or truncated manually — the skill never reads
-> it back, so past entries are for human reference only.
-
 ---
 
-## Step 6 — Terminal Summary
+### Terminal Summary
 
 ```
 ╔══════════════════════════════════════════╗
 ║           UNDRIFT — Run Complete         ║
 ╠══════════════════════════════════════════╣
-║  Sessions scanned:     N                 ║
+║  Sessions found:       N                 ║
+║  Sessions filtered:    N  (< 3 user turns)
+║  Sessions skipped:     N  (2000-line cap)║
+║  Sessions analysed:    N                 ║
 ║  Patterns extracted:   N                 ║
 ║  Rules proposed:       N                 ║
 ║    └─ by theme:        [theme: N, ...]   ║
@@ -201,6 +248,9 @@ Append to this file in the project root. Never overwrite it.
 
 ## Hard Constraints
 
+- **NEVER use subagents** — all steps run in the main agent
+- **NEVER add steps, build scripts, or improvise analysis not listed above** — follow these steps exactly as written, even when you encounter unexpected session content
+- **NEVER use the Read tool to read session files** — the bash extraction pass in Step 1 is the only file access
 - **NEVER write directly to `CLAUDE.md`** — always use `CLAUDE.md.undrift`
 - **NEVER overwrite `CORRECTIONS.log.md`** — always append
 - **NEVER fabricate session content** — only report what is actually in the sessions
